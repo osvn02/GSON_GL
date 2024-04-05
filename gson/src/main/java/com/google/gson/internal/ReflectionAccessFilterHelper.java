@@ -24,36 +24,21 @@ import java.util.List;
 
 /** Internal helper class for {@link ReflectionAccessFilter}. */
 public class ReflectionAccessFilterHelper {
-  private ReflectionAccessFilterHelper() {}
-
-  // Platform type detection is based on Moshi's Util.isPlatformType(Class)
-  // See
-  // https://github.com/square/moshi/blob/3c108919ee1cce88a433ffda04eeeddc0341eae7/moshi/src/main/java/com/squareup/moshi/internal/Util.java#L141
 
   public static boolean isJavaType(Class<?> c) {
     return isJavaType(c.getName());
-  }
-
-  private static boolean isJavaType(String className) {
-    return className.startsWith("java.") || className.startsWith("javax.");
   }
 
   public static boolean isAndroidType(Class<?> c) {
     return isAndroidType(c.getName());
   }
 
-  private static boolean isAndroidType(String className) {
-    return className.startsWith("android.")
-        || className.startsWith("androidx.")
-        || isJavaType(className);
-  }
-
   public static boolean isAnyPlatformType(Class<?> c) {
     String className = c.getName();
     return isAndroidType(className) // Covers Android and Java
-        || className.startsWith("kotlin.")
-        || className.startsWith("kotlinx.")
-        || className.startsWith("scala.");
+            || className.startsWith("kotlin.")
+            || className.startsWith("kotlinx.")
+            || className.startsWith("scala.");
   }
 
   /**
@@ -62,7 +47,7 @@ public class ReflectionAccessFilterHelper {
    * returned {@code INDECISIVE}.
    */
   public static FilterResult getFilterResult(
-      List<ReflectionAccessFilter> reflectionFilters, Class<?> c) {
+          List<ReflectionAccessFilter> reflectionFilters, Class<?> c) {
     for (ReflectionAccessFilter filter : reflectionFilters) {
       FilterResult result = filter.check(c);
       if (result != FilterResult.INDECISIVE) {
@@ -75,6 +60,22 @@ public class ReflectionAccessFilterHelper {
   /** See {@link AccessibleObject#canAccess(Object)} (Java >= 9) */
   public static boolean canAccess(AccessibleObject accessibleObject, Object object) {
     return AccessChecker.INSTANCE.canAccess(accessibleObject, object);
+  }
+
+  private ReflectionAccessFilterHelper() {}
+
+  // Platform type detection is based on Moshi's Util.isPlatformType(Class)
+  // See
+  // https://github.com/square/moshi/blob/3c108919ee1cce88a433ffda04eeeddc0341eae7/moshi/src/main/java/com/squareup/moshi/internal/Util.java#L141
+
+  private static boolean isJavaType(String className) {
+    return className.startsWith("java.") || className.startsWith("javax.");
+  }
+
+  private static boolean isAndroidType(String className) {
+    return className.startsWith("android.")
+        || className.startsWith("androidx.")
+        || isJavaType(className);
   }
 
   private abstract static class AccessChecker {
