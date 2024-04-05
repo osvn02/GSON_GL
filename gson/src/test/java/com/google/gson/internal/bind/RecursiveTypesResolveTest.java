@@ -20,11 +20,11 @@ import static com.google.common.truth.Truth.assertThat;
 
 import com.google.gson.Gson;
 import com.google.gson.TypeAdapter;
-import com.google.gson.internal.$Gson$Types;
+import com.google.gson.internal.GsonTypeChecker;
 import org.junit.Test;
 
 /**
- * Test fixes for infinite recursion on {@link $Gson$Types#resolve(java.lang.reflect.Type, Class,
+ * Test fixes for infinite recursion on {@link GsonTypeChecker#resolve(java.lang.reflect.Type, Class,
  * java.lang.reflect.Type)}, described at <a href="https://github.com/google/gson/issues/440">Issue
  * #440</a> and similar issues.
  *
@@ -55,26 +55,26 @@ public class RecursiveTypesResolveTest {
   /** Tests below check the behavior of the methods changed for the fix. */
   @Test
   public void testDoubleSupertype() {
-    assertThat($Gson$Types.supertypeOf($Gson$Types.supertypeOf(Number.class)))
-        .isEqualTo($Gson$Types.supertypeOf(Number.class));
+    assertThat(GsonTypeChecker.supertypeOf(GsonTypeChecker.supertypeOf(Number.class)))
+        .isEqualTo(GsonTypeChecker.supertypeOf(Number.class));
   }
 
   @Test
   public void testDoubleSubtype() {
-    assertThat($Gson$Types.subtypeOf($Gson$Types.subtypeOf(Number.class)))
-        .isEqualTo($Gson$Types.subtypeOf(Number.class));
+    assertThat(GsonTypeChecker.subtypeOf(GsonTypeChecker.subtypeOf(Number.class)))
+        .isEqualTo(GsonTypeChecker.subtypeOf(Number.class));
   }
 
   @Test
   public void testSuperSubtype() {
-    assertThat($Gson$Types.supertypeOf($Gson$Types.subtypeOf(Number.class)))
-        .isEqualTo($Gson$Types.subtypeOf(Object.class));
+    assertThat(GsonTypeChecker.supertypeOf(GsonTypeChecker.subtypeOf(Number.class)))
+        .isEqualTo(GsonTypeChecker.subtypeOf(Object.class));
   }
 
   @Test
   public void testSubSupertype() {
-    assertThat($Gson$Types.subtypeOf($Gson$Types.supertypeOf(Number.class)))
-        .isEqualTo($Gson$Types.subtypeOf(Object.class));
+    assertThat(GsonTypeChecker.subtypeOf(GsonTypeChecker.supertypeOf(Number.class)))
+        .isEqualTo(GsonTypeChecker.subtypeOf(Object.class));
   }
 
   /** Tests for recursion while resolving type variables. */
