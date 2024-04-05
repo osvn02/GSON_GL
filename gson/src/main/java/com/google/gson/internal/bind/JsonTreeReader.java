@@ -37,6 +37,7 @@ import java.util.Map;
  * @author Jesse Wilson
  */
 public final class JsonTreeReader extends JsonReader {
+
   private static final Reader UNREADABLE_READER =
       new Reader() {
         @Override
@@ -50,6 +51,8 @@ public final class JsonTreeReader extends JsonReader {
         }
       };
   private static final Object SENTINEL_CLOSED = new Object();
+  public static final String EXPECTED = "Expected ";
+  public static final String BUT_WAS = " but was ";
 
   /*
    * The nesting stack. Using a manual array rather than an ArrayList saves 20%.
@@ -176,7 +179,7 @@ public final class JsonTreeReader extends JsonReader {
   private void expect(JsonToken expected) throws IOException {
     if (peek() != expected) {
       throw new IllegalStateException(
-          "Expected " + expected + " but was " + peek() + locationString());
+          EXPECTED + expected + BUT_WAS + peek() + locationString());
     }
   }
 
@@ -200,7 +203,7 @@ public final class JsonTreeReader extends JsonReader {
     JsonToken token = peek();
     if (token != JsonToken.STRING && token != JsonToken.NUMBER) {
       throw new IllegalStateException(
-          "Expected " + JsonToken.STRING + " but was " + token + locationString());
+          EXPECTED + JsonToken.STRING + BUT_WAS + token + locationString());
     }
     String result = ((JsonPrimitive) popStack()).getAsString();
     if (stackSize > 0) {
@@ -233,7 +236,7 @@ public final class JsonTreeReader extends JsonReader {
     JsonToken token = peek();
     if (token != JsonToken.NUMBER && token != JsonToken.STRING) {
       throw new IllegalStateException(
-          "Expected " + JsonToken.NUMBER + " but was " + token + locationString());
+          EXPECTED + JsonToken.NUMBER + BUT_WAS + token + locationString());
     }
     double result = ((JsonPrimitive) peekStack()).getAsDouble();
     if (!isLenient() && (Double.isNaN(result) || Double.isInfinite(result))) {
@@ -251,7 +254,7 @@ public final class JsonTreeReader extends JsonReader {
     JsonToken token = peek();
     if (token != JsonToken.NUMBER && token != JsonToken.STRING) {
       throw new IllegalStateException(
-          "Expected " + JsonToken.NUMBER + " but was " + token + locationString());
+          EXPECTED + JsonToken.NUMBER + BUT_WAS + token + locationString());
     }
     long result = ((JsonPrimitive) peekStack()).getAsLong();
     popStack();
@@ -266,7 +269,7 @@ public final class JsonTreeReader extends JsonReader {
     JsonToken token = peek();
     if (token != JsonToken.NUMBER && token != JsonToken.STRING) {
       throw new IllegalStateException(
-          "Expected " + JsonToken.NUMBER + " but was " + token + locationString());
+          EXPECTED + JsonToken.NUMBER + BUT_WAS + token + locationString());
     }
     int result = ((JsonPrimitive) peekStack()).getAsInt();
     popStack();
