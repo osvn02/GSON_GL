@@ -1195,7 +1195,6 @@ public class JsonReader implements Closeable {
           return;
         } else if (c == '\\') {
           pos = p;
-          char unused = readEscapeCharacter();
           p = pos;
           l = limit;
         } else if (c == '\n') {
@@ -1773,8 +1772,6 @@ public class JsonReader implements Closeable {
 
   /** Consumes the non-execute prefix if it exists. */
   private void consumeNonExecutePrefix() throws IOException {
-    // fast-forward through the leading whitespace
-    int unused = nextNonWhitespace(true);
     pos--;
 
     if (pos + 5 > limit && !fillBuffer(5)) {
