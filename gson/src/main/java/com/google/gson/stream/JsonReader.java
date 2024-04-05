@@ -1451,18 +1451,13 @@ public class JsonReader implements Closeable {
    * caller can always push back the returned character by decrementing {@code pos}.
    */
   private int nextNonWhitespace(boolean throwOnEof) throws IOException {
-    /*
-     * This code uses ugly local variables 'p' and 'l' representing the 'pos'
-     * and 'limit' fields respectively. Using locals rather than fields saves
-     * a few field reads for each whitespace character in a pretty-printed
-     * document, resulting in a 5% speedup. We need to flush 'p' to its field
-     * before any (potentially indirect) call to fillBuffer() and reread both
-     * 'p' and 'l' after any (potentially indirect) call to the same method.
-     */
     char[] buffer = this.buffer;
     int p = pos;
     int l = limit;
+
     while (true) {
+      p = consumeWhitespace(buffer, p, l);
+
       if (p == l) {
         pos = p;
         if (!fillBuffer(1)) {
@@ -1473,70 +1468,84 @@ public class JsonReader implements Closeable {
       }
 
       int c = buffer[p++];
-      if (c == '\n') {
-        lineNumber++;
-        lineStart = p;
-        continue;
-      } else if (c == ' ' || c == '\r' || c == '\t') {
-        continue;
-      }
-
       if (c == '/') {
-        pos = p;
-        if (p == l) {
-          pos--; // push back '/' so it's still in the buffer when this method returns
-          boolean charsLoaded = fillBuffer(2);
-          pos++; // consume the '/' again
-          if (!charsLoaded) {
-            return c;
-          }
-        }
-
-        checkLenient();
-        char peek = buffer[pos];
-        switch (peek) {
-          case '*':
-            // skip a /* c-style comment */
-            pos++;
-            if (!skipTo("*/")) {
-              throw syntaxError("Unterminated comment");
-            }
-            p = pos + 2;
-            l = limit;
-            continue;
-
-          case '/':
-            // skip a // end-of-line comment
-            pos++;
-            skipToEndOfLine();
-            p = pos;
-            l = limit;
-            continue;
-
-          default:
-            return c;
-        }
+        p = handleSlashComment(buffer, p, l);
       } else if (c == '#') {
-        pos = p;
-        /*
-         * Skip a # hash end-of-line comment. The JSON RFC doesn't
-         * specify this behaviour, but it's required to parse
-         * existing documents. See http://b/2571423.
-         */
-        checkLenient();
-        skipToEndOfLine();
-        p = pos;
-        l = limit;
+        p = handleHashComment(buffer, p, l);
       } else {
         pos = p;
         return c;
       }
     }
+
     if (throwOnEof) {
       throw new EOFException("End of input" + locationString());
     } else {
       return -1;
     }
+  }
+
+  private int consumeWhitespace(char[] buffer, int p, int l) {
+    while (p < l && (buffer[p] == ' ' || buffer[p] == '\r' || buffer[p] == '\t')) {
+      if (buffer[p] == '\n') {
+        lineNumber++;
+        lineStart = p;
+      }
+      p++;
+    }
+    return p;
+  }
+
+  private int handleSlashComment(char[] buffer, int p, int l) throws IOException {
+    pos = p;
+    if (p == l) {
+      pos--;
+      boolean charsLoaded = fillBuffer(2);
+      pos++;
+      if (!charsLoaded) {
+        return '/';
+      }
+    }
+
+    checkLenient();
+    char peek = buffer[pos];
+    switch (peek) {
+      case '*':
+        return skipTo(buffer, pos + 1, l, "*/");
+      case '/':
+        skipToEndOfLine();
+        return pos;
+      default:
+        return p;
+    }
+  }
+
+  private int handleHashComment(char[] buffer, int p, int l) throws IOException {
+    pos = p;
+    checkLenient();
+    skipToEndOfLine();
+    return pos;
+  }
+
+  private int skipTo(char[] buffer, int p, int l, String toFind) throws IOException {
+    int pos = indexOf(buffer, p, l, toFind.toCharArray());
+    if (pos == -1) {
+      throw syntaxError("Unterminated comment");
+    }
+    return pos + toFind.length();
+  }
+
+  private int indexOf(char[] haystack, int startPos, int endPos, char[] needle) {
+    outer:
+    for (int i = startPos; i < endPos - needle.length + 1; i++) {
+      for (int j = 0; j < needle.length; j++) {
+        if (haystack[i + j] != needle[j]) {
+          continue outer;
+        }
+      }
+      return i;
+    }
+    return -1;
   }
 
   private void checkLenient() throws MalformedJsonException {
