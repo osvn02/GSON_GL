@@ -1059,40 +1059,22 @@ public class JsonReader implements Closeable {
    * @param quote either ' or ".
    */
   private String nextQuotedValue(char quote) throws IOException {
-    // Like nextNonWhitespace, this uses locals 'p' and 'l' to save inner-loop field access.
     char[] buffer = this.buffer;
     StringBuilder builder = null;
+
     while (true) {
       int p = pos;
       int l = limit;
-      /* the index of the first character not yet appended to the builder. */
       int start = p;
+
       while (p < l) {
         int c = buffer[p++];
-
-        // In strict mode, throw an exception when meeting unescaped control characters (U+0000
-        // through U+001F)
-        if (strictness == Strictness.STRICT && c < 0x20) {
-          throw syntaxError(
-              "Unescaped control characters (\\u0000-\\u001F) are not allowed in strict mode");
-        } else if (c == quote) {
+        if (c == quote) {
           pos = p;
-          int len = p - start - 1;
-          if (builder == null) {
-            return new String(buffer, start, len);
-          } else {
-            builder.append(buffer, start, len);
-            return builder.toString();
-          }
+          return appendQuotedValue(buffer, start, p - start - 1, builder);
         } else if (c == '\\') {
           pos = p;
-          int len = p - start - 1;
-          if (builder == null) {
-            int estimatedLength = (len + 1) * 2;
-            builder = new StringBuilder(Math.max(estimatedLength, 16));
-          }
-          builder.append(buffer, start, len);
-          builder.append(readEscapeCharacter());
+          builder = appendEscapedCharacter(buffer, start, p - start - 1, builder);
           p = pos;
           l = limit;
           start = p;
@@ -1102,17 +1084,42 @@ public class JsonReader implements Closeable {
         }
       }
 
-      if (builder == null) {
-        int estimatedLength = (p - start) * 2;
-        builder = new StringBuilder(Math.max(estimatedLength, 16));
-      }
-      builder.append(buffer, start, p - start);
+      builder = appendRemaining(buffer, start, p - start, builder);
       pos = p;
       if (!fillBuffer(1)) {
         throw syntaxError("Unterminated string");
       }
     }
   }
+
+  private String appendQuotedValue(char[] buffer, int start, int len, StringBuilder builder) {
+    if (builder == null) {
+      return new String(buffer, start, len);
+    } else {
+      builder.append(buffer, start, len);
+      return builder.toString();
+    }
+  }
+
+  private StringBuilder appendEscapedCharacter(char[] buffer, int start, int len, StringBuilder builder) throws IOException {
+    if (builder == null) {
+      int estimatedLength = (len + 1) * 2;
+      builder = new StringBuilder(Math.max(estimatedLength, 16));
+    }
+    builder.append(buffer, start, len);
+    builder.append(readEscapeCharacter());
+    return builder;
+  }
+
+  private StringBuilder appendRemaining(char[] buffer, int start, int len, StringBuilder builder) {
+    if (builder == null) {
+      int estimatedLength = len * 2;
+      builder = new StringBuilder(Math.max(estimatedLength, 16));
+    }
+    builder.append(buffer, start, len);
+    return builder;
+  }
+
 
   /** Returns an unquoted value as a string. */
   @SuppressWarnings("fallthrough")
